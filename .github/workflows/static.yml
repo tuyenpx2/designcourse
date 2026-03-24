@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Quan trọng để VitePress lấy được thời gian cập nhật file
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -35,13 +35,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Bổ sung bước này để sửa lỗi Permission denied
+      - name: Fix permissions
+        run: chmod -R +x node_modules/.bin
+
       - name: Build with VitePress
-        run: npm run docs:build
+        # Sử dụng npx để đảm bảo lệnh được thực thi đúng môi trường
+        run: npx vitepress build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Chỉ upload thư mục đã build xong
           path: .vitepress/dist
 
   deploy:
