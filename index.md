@@ -8,10 +8,16 @@ hero:
   actions:
     - theme: brand
       text: 📋 Yokenteigi Course
-      link: /yokenteigi/README
+      link: /yokenteigi/
     - theme: alt
       text: 🏗️ Basic Design Course
-      link: /basicdesign/README
+      link: /basicdesign/
+    - theme: alt
+      text: 📅 Lịch Yokenteigi
+      link: /schedule-yokenteigi
+    - theme: alt
+      text: 📅 Lịch Basic Design
+      link: /schedule-basicdesign
 
 features:
   - title: 📋 要件定義書コース
