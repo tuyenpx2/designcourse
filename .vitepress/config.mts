@@ -4,18 +4,19 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Osaka - Training - Design Course",
   description: "Khóa học viết tài liệu Yokenteigi & Basic Design",
+  cleanUrls: true,
   themeConfig: {
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Yokenteigi', link: '/yokenteigi/README' },
-      { text: 'Basic Design', link: '/basicdesign/README' }
+      { text: 'Yokenteigi', link: '/yokenteigi/' },
+      { text: 'Basic Design', link: '/basicdesign/' }
     ],
 
     sidebar: [
       {
         text: '📋 要件定義書コース',
         items: [
-          { text: 'Tổng quan', link: '/yokenteigi/README' },
+          { text: 'Tổng quan', link: '/yokenteigi/' },
           { text: 'Buổi 1 — Nền tảng Yokenteigi', link: '/yokenteigi/buoi-01' },
           { text: 'Buổi 2 — Cấu trúc tài liệu', link: '/yokenteigi/buoi-02' },
           { text: 'Buổi 3 — 業務フロー & 機能詳細', link: '/yokenteigi/buoi-03' },
@@ -30,7 +31,7 @@ export default defineConfig({
       {
         text: '🏗️ 基本設計書コース',
         items: [
-          { text: 'Tổng quan', link: '/basicdesign/README' },
+          { text: 'Tổng quan', link: '/basicdesign/' },
           { text: 'Buổi 1 — Nền tảng & ER図', link: '/basicdesign/buoi-01' },
           { text: 'Buổi 2 — ER図 設計', link: '/basicdesign/buoi-02' },
           { text: 'Buổi 3 — テーブル定義書', link: '/basicdesign/buoi-03' },
