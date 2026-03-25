@@ -12,32 +12,38 @@
 - Tích hợp tất cả phần thành 1 tài liệu
 - Kiểm tra traceability: Yokenteigi → Basic Design
 - Phát hiện và lấp đầy các gap còn thiếu
+- Review đặc biệt: async state coverage, AI timeout, security cho file tài chính
 
 ### Agenda
 ```
-0:00 - 0:20  宿題レビュー (Batch + Security)
+0:00 - 0:20  宿題レビュー (Batch + Security + Docker)
 0:20 - 0:50  トレーサビリティ確認 (機能要件の網羅性)
 0:50 - 1:20  設計書の統合 & ギャップ分析
-1:20 - 1:45  相互レビュー
+1:20 - 1:45  相互レビュー (AI-IA特有の観点)
 ```
 
 ---
 
 ## Slide 2: Lỗi phổ biến từ bài nộp buổi 6
 
-### Lỗi 1: Batch thiếu Idempotency
+### Lỗi 1: Batch thiếu Idempotency — retry logic
 
 **❌ Thiếu:**
 ```
-STEP 3: overdue_notified_count を +1 する
+STEP 3: retry_count を +1 する
 ```
 
-**✅ Đầy đủ — cần đảm bảo không gửi trùng:**
+**✅ Đầy đủ — cần đảm bảo không retry trùng:**
 ```
-STEP 3: 通知ルールに基づきカウントが更新される場合のみ送信
-  条件: 超過日数 ∈ {1, 3, 7} AND overdue_notified_count < 目標回数
-  → 同じ超過日数で2回実行されても、2回目は送信しない
-  実装: overdue_notified_count の値と超過日数のマッピングで判断
+STEP 3: CAS更新で排他制御する
+  UPDATE invoices
+  SET status = 'QUEUED', retry_count = retry_count + 1
+  WHERE id = {invoice_id}
+    AND status = 'FAILED'       ← 現在のステータスを条件に
+    AND retry_count < 3;        ← カウント上限チェック
+
+  → affected rows = 0 なら既に他のプロセスが処理済み → スキップ
+  → 同じバッチが2回実行されても2回リトライしない
 ```
 
 ---
@@ -62,26 +68,34 @@ Rate Limit の状態は Redis に保存する:
   INCR key → 回数を加算
   EXPIRE key 60 → 60秒後に自動リセット
   回数 > 閾値 → 429 Too Many Requests を返す
+
+AI-IA 特有のルール:
+  POST /invoices/upload : 10リクエスト/分/ユーザー (AI処理コスト考慮)
+  POST /auth/login      : 5リクエスト/分/IP
+  GET  /invoices        : 60リクエスト/分/ユーザー
 ```
 
 ---
 
-### Lỗi 3: Security — Thiếu CORS設定
+### Lỗi 3: Security — AI Timeout 未設計
 
 **Phần hay bị bỏ quên:**
 ```
-CORS設定 (Cross-Origin Resource Sharing):
+Python AI Service がタイムアウトした場合の設計:
 
-社内システムのため、外部オリジンからのアクセスは禁止
+設計:
+  Laravel Worker → Python AI Service 呼び出し
+  タイムアウト設定: 30秒 (1件のAI処理上限)
 
-設定:
-  Access-Control-Allow-Origin: https://internal.company.co.jp
-  Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE
-  Access-Control-Allow-Headers: Content-Type, Authorization
-  Access-Control-Allow-Credentials: true
-  Access-Control-Max-Age: 86400
+  タイムアウト発生時:
+  → invoices.status = 'FAILED'
+  → error_message = 'AI処理タイムアウト (30秒超過)'
+  → retry_count + 1 (自動リトライ対象に)
+  → BATCH-002 で自動リトライ
 
-※ wildcard (*) は絶対に使わない
+  Python AI Service のヘルスチェック:
+  GET /health (Laravel → Python, 1分ごと)
+  → 応答なし: 管理者アラート + 新規キュー追加を一時停止
 ```
 
 ---
@@ -102,82 +116,102 @@ CORS設定 (Cross-Origin Resource Sharing):
 
 ---
 
-### Traceability Matrix — Hệ thống thiết bị
+### Traceability Matrix — AI-IA System
 
 | 機能ID | 機能名 | DB Table | API | 画面 | Batch | 備考 |
 |--------|--------|---------|-----|------|-------|------|
 | F001 | ログイン | users | POST /auth/login | S001 | — | ✅ |
-| F002 | ログアウト | — | POST /auth/logout | — | — | ✅ |
+| F002 | ログアウト | personal_access_tokens | POST /auth/logout | — | — | ✅ |
 | F003 | PW変更 | users | PUT /auth/password | S002 | — | ✅ |
-| F004 | アカウント管理 | users, departments | GET/POST/PUT /admin/users | S120 | — | ✅ |
-| F010 | 機器登録 | equipment | POST /admin/equipment | S101 | — | ✅ |
-| F011 | 機器編集 | equipment | PUT /admin/equipment/{id} | S101 | — | ✅ |
-| F012 | 機器廃棄 | equipment (soft) | DELETE /admin/equipment/{id} | S100 | — | ✅ |
-| F013 | カテゴリ管理 | categories | GET/POST/PUT /admin/categories | S121 | — | ⚠️ S121未定義 |
-| F014 | ステータス手動変更 | equipment | PATCH /admin/equipment/{id}/status | S101 | — | ✅ |
-| F015 | CSV一括インポート | equipment | POST /admin/equipment/import | S102 | — | ✅ |
-| F020 | 機器一覧 | equipment | GET /equipment | S020 | — | ✅ |
-| F021 | 機器詳細 | equipment | GET /equipment/{id} | S021 | — | ✅ |
-| F022 | 空き確認 | applications | (GET /equipmentに含む) | S020 | — | ✅ |
-| F030 | 貸出申請 | applications | POST /applications | S030-S032 | — | ✅ |
-| F031 | 申請一覧(自分) | applications | GET /my/applications | S040 | — | ✅ |
-| F032 | 申請キャンセル | applications | DELETE /my/applications/{id} | S041 | — | ✅ |
-| F033 | 申請一覧(全体) | applications | GET /admin/applications | S110 | — | ✅ |
-| F034 | 申請承認 | applications, equipment | POST .../approve | S111 | — | ✅ |
-| F035 | 申請却下 | applications | POST .../reject | S111 | — | ✅ |
-| F040 | 返却申請 | applications | POST .../return | S042 | — | ✅ |
-| F041 | 返却確認 | applications, equipment | POST .../confirm-return | S111 | — | ✅ |
-| F042 | 返却期限延長申請 | applications | POST .../extend | S041 | — | ⚠️ API未定義 |
-| F043 | 延長承認 | applications | POST .../approve-extend | S111 | — | ⚠️ API未定義 |
-| F050 | 申請受付通知 | notifications | (イベント) | — | — | ✅ |
-| F051 | 承認/却下通知 | notifications | (イベント) | — | — | ✅ |
-| F052 | 返却期限前通知 | notifications | — | — | BATCH-001 | ✅ |
-| F053 | 返却期限超過通知 | notifications | — | — | BATCH-001 | ✅ |
-| F060 | 貸出履歴(機器別) | applications | GET /admin/equipment/{id}/history | S100 | — | ⚠️ API未定義 |
-| F061 | 貸出履歴(社員別) | applications | GET /admin/users/{id}/history | S120 | — | ⚠️ API未定義 |
-| F062 | 利用率レポート | applications | GET /admin/reports/utilization | S130 | BATCH-005 | ✅ |
-| F063 | 超過履歴レポート | applications | GET /admin/reports/overdue | S130 | — | ⚠️ API未定義 |
+| F004 | ユーザー管理 | users | GET/POST/PUT /admin/users | S100 | — | ✅ |
+| F010 | 請求書アップロード | invoices | POST /invoices/upload (202) | S030 | — | ✅ |
+| F011 | バッチアップロード | invoices, processing_batches | POST /invoices/upload | S030 | — | ✅ |
+| F012 | アップロード状態確認 | invoices | GET /invoices/{id}/status | S011, S031 | — | ✅ |
+| F013 | バッチ進捗確認 | processing_batches | GET /batches/{id}/status | S031 | — | ✅ |
+| F020 | AI処理（自動）| invoices, invoice_extracted_data | (内部: /ai/process) | — | BATCH-001 | ✅ |
+| F021 | 自動リトライ | invoices | — | — | BATCH-002 | ✅ |
+| F022 | 請求書一覧 | invoices | GET /invoices | S010 | — | ✅ |
+| F023 | 請求書詳細 | invoices, invoice_extracted_data | GET /invoices/{id} | S011 | — | ✅ |
+| F030 | AI抽出結果レビュー | invoice_extracted_data | GET /invoices/{id} | S020 | — | ✅ |
+| F031 | 仕訳確認・修正 | journal_entries | PUT /journal-entries/{id} | S020, S021 | — | ✅ |
+| F032 | 仕訳承認 | journal_entries | POST /invoices/{id}/approve | S020 | — | ✅ |
+| F033 | 仕訳一覧 | journal_entries | GET /journal-entries | S040 | — | ✅ |
+| F040 | 仕入先マスタ管理 | suppliers | GET/POST/PUT /admin/suppliers | S110 | — | ✅ |
+| F041 | 勘定科目マッピング管理 | account_code_mapping | GET/POST/PUT /admin/account-codes | S111 | — | ✅ |
+| F050 | 日次レポート | ai_daily_reports | GET /admin/reports | S120 | BATCH-004 | ✅ |
+| F051 | アーカイブ | invoices_archive | — | — | BATCH-005 | ✅ |
+| F060 | アップロード失敗通知 | notification_logs | (イベント) | — | — | ✅ |
+| F061 | バッチ完了通知 | notification_logs | (イベント) | — | — | ✅ |
+| F070 | OCR精度ダッシュボード | invoice_extracted_data | GET /admin/reports/ai-accuracy | S120 | BATCH-004 | ⚠️ APIパラメータ未定義 |
+| F071 | 仕入先別統計 | invoices, suppliers | GET /admin/reports/by-supplier | S120 | — | ⚠️ API未定義 |
+| F072 | 請求書削除 | invoices | DELETE /invoices/{id} | S010 | — | ⚠️ 削除条件未定義 |
 
-**⚠️ Gap発見 5件 → 今日中に設計を補完する**
+**⚠️ Gap発見 3件 → 今日中に設計を補完する**
 
 ---
 
 ## Slide 4: Gap分析 — 見つかったGapを埋める
 
-### Gap 1: カテゴリ管理画面 (S121) が未定義
+### Gap 1: OCR精度ダッシュボードAPI (F070) パラメータ未定義
 
 **追加する:**
 ```
-画面ID: S121
-画面名: カテゴリ管理
-URL:   /admin/categories
-権限:  Admin
-機能:  カテゴリの一覧表示・新規追加・編集
+GET /api/v1/admin/reports/ai-accuracy
 
-表示項目: カテゴリ名, 最大貸出日数, 1人最大数, 有効/無効
-操作: [追加] [編集] [有効/無効切替]
+Query Parameters:
+  from        : date, default=過去30日
+  to          : date
+  group_by    : 'day' | 'week' | 'month', default='day'
+  model_version: string, optional (特定モデルでフィルター)
+
+Response:
+{
+  "data": [
+    {
+      "date": "2026-03-24",
+      "model_version": "layoutlmv3-base-sroie-v1.2",
+      "total_processed": 45,
+      "completed_count": 38,
+      "needs_review_count": 5,
+      "failed_count": 2,
+      "avg_confidence_score": 0.8734,
+      "success_rate": 0.844
+    }
+  ],
+  "meta": { "total": 30 }
+}
 ```
 
-### Gap 2: 延長申請 API (F042, F043) が未定義
+### Gap 2: 仕入先別統計API (F071) が未定義
 
 **追加する:**
 ```
-POST /my/applications/{id}/extend
-  Body: { "new_return_date": "2026-05-01" }
-  Validation: new_return_date > 現在のreturn_date,
-              かつカテゴリmax_days以内
+GET /api/v1/admin/reports/by-supplier
 
-POST /admin/applications/{id}/approve-extend
-  処理: applications.return_date を更新
+Query Parameters:
+  from, to    : date range
+  page, per   : pagination
+
+Response:
+  仕入先ごとに: 請求書件数, 合計金額, 平均confidence, NEEDS_REVIEW率
 ```
 
-### Gap 3: 履歴API (F060, F061, F063) が未定義
+### Gap 3: 請求書削除の条件 (F072) が未定義
 
 **追加する:**
 ```
-GET /admin/equipment/{id}/history?page=1&per=20
-GET /admin/users/{id}/applications?page=1&per=20
-GET /admin/reports/overdue?from=2026-01-01&to=2026-03-31
+DELETE /api/v1/invoices/{id}
+
+削除可能条件:
+  - status = 'FAILED' または 'UPLOADED'
+  - invoices.user_id = リクエスト者のID (または Admin)
+  - journal_entries が存在しないこと
+
+削除不可の場合:
+  422 ERR-INV-422 "承認済みの仕訳が存在するため削除できません"
+
+実装: Soft Delete (deleted_at = NOW())
+     物理削除は禁止 (7年保持義務)
 ```
 
 ---
@@ -188,61 +222,66 @@ GET /admin/reports/overdue?from=2026-01-01&to=2026-03-31
 
 ```
 基本設計書 v1.0
-社内機器管理・貸出システム
+AI請求書自動処理システム (AI-IA)
+アカウントプロ株式会社
 
 1. 文書概要
    1.1 目的・適用範囲
    1.2 改訂履歴
-   1.3 用語定義
+   1.3 用語定義 (AI-IA特有: confidence_score, NEEDS_REVIEW等)
 
 2. システム構成設計
-   2.1 システム構成図
-   2.2 技術スタック選定理由
+   2.1 システム構成図 (Flutter + Laravel + Python AI + Redis + MinIO)
+   2.2 技術スタック選定理由 (特にMicroservices採用理由)
    2.3 環境構成 (本番/ステージング/開発)
+   2.4 AI Processing State Machine (UPLOADED→QUEUED→PROCESSING→...)
 
 3. 機能設計
    3.1 機能一覧と要件対応表 (トレーサビリティマトリックス)
-   3.2 モジュール構成
+   3.2 モジュール構成 (Laravel + Python の責任分担)
 
 4. DB設計
    4.1 ER図
-   4.2 テーブル定義書 (10テーブル)
-   4.3 インデックス一覧
-   4.4 マスタデータ (初期データ)
+   4.2 テーブル定義書 (9テーブル)
+   4.3 インデックス一覧 (大量データ対策)
+   4.4 マスタデータ (account_code_mapping初期データ)
 
 5. 画面設計
    5.1 画面一覧
    5.2 画面遷移図
-   5.3 画面仕様書 (19画面)
+   5.3 画面仕様書 (16画面)
+   5.4 Split View レビュー画面仕様 (核心画面)
 
 6. API設計
    6.1 API一覧
-   6.2 API仕様書 (30エンドポイント)
+   6.2 API仕様書 (25エンドポイント)
    6.3 エラーコード一覧
+   6.4 Internal API仕様 (Laravel↔Python AI Service)
 
 7. バッチ設計
    7.1 バッチ一覧
    7.2 バッチ詳細仕様 (5バッチ)
 
 8. セキュリティ設計
-   8.1 認証・認可設計
-   8.2 通信セキュリティ
-   8.3 入力値検証
-   8.4 監査ログ設計
+   8.1 認証・認可設計 (Sanctum RBAC)
+   8.2 AI API Key管理 (最重要)
+   8.3 ファイルセキュリティ (MinIO Signed URL + ClamAV)
+   8.4 入力値検証 (OWASP対応)
+   8.5 監査ログ設計 (7年保持)
 
 9. インフラ・環境設計
-   9.1 システム構成図
+   9.1 Docker Compose構成 (6サービス)
    9.2 デプロイ設計 (Blue-Green)
    9.3 監視設計
    9.4 バックアップ設計
 
 10. 非機能設計
-    10.1 性能設計
+    10.1 性能設計 (AI処理5秒以内、バッチ10分以内)
     10.2 可用性設計
 
-付録A: Migration Script 一覧
-付録B: エラーコード一覧
-付録C: メールテンプレート一覧
+付録A: Migration Script 一覧 (V001〜V011)
+付録B: エラーコード一覧 (ERR-AUTH/INV/JNL/AI/UPLOAD)
+付録C: Docker Compose 設定ファイル
 ```
 
 ---
@@ -252,66 +291,88 @@ GET /admin/reports/overdue?from=2026-01-01&to=2026-03-31
 ### DB設計チェック
 - [ ] 全テーブルにPK (UUID)、created_at、updated_atがある
 - [ ] Soft Deleteが必要なテーブルにdeleted_atがある
-- [ ] StatusがあるテーブルにStatus History テーブルがある
+- [ ] invoicesテーブルに (status, created_at) 複合インデックスがある
+- [ ] confidence_scoreがNUMERIC(5,4)で定義されている (FLOAT禁止)
 - [ ] FK制約が全て定義されている
-- [ ] 全IndexのWHERE条件が適切か
-- [ ] ENUM値がCHECK制約で定義されている
-- [ ] 楽観ロックが必要なテーブルにversionカラムがある
+- [ ] AI Processing 6ステータスがCHECK制約で定義されている
+- [ ] journal_entriesに物理削除なし (会計帳簿)
 
 ### API設計チェック
-- [ ] 全機能にAPIが対応している (トレーサビリティ確認)
+- [ ] POST /invoices/upload が 202 Accepted を返す (201ではない)
+- [ ] GET /invoices/{id}/status に `is_terminal` フラグがある
+- [ ] POST /ai/process が Internal専用であることが明記されている
 - [ ] 全ListエンドポイントにPaginationがある
+- [ ] AI Service API KeyがAPIレスポンスに含まれていない
 - [ ] エラーレスポンスのフォーマットが統一されている
-- [ ] 認証が不要なエンドポイントが意図通りか
-- [ ] Admin専用エンドポイントに /admin prefix がある
-- [ ] HTTPメソッドが適切か (GET=参照, POST=作成, etc.)
 
 ### 画面設計チェック
-- [ ] 全API呼び出しが画面仕様書に記載されている
-- [ ] Empty/Loading/Errorの3状態が全画面で定義されている
-- [ ] 権限による表示差異が定義されている
-- [ ] バリデーションエラーの表示箇所が定義されている
+- [ ] Split View レビュー画面の左右ペイン仕様が明記されている
+- [ ] 6ステータス全てが画面で表現されている
+- [ ] Signed URLの取得方法が定義されている
+- [ ] Polling の停止条件 (is_terminal) が定義されている
+- [ ] バッチ処理状態画面のポーリング間隔が定義されている
 
 ### セキュリティチェック
-- [ ] 全APIにAuthenticationチェックがある (公開APIを除く)
-- [ ] Admin専用操作にAuthorizationチェックがある
-- [ ] ユーザーが他人のデータにアクセスできないチェックがある
-- [ ] SQLインジェクション対策の実装方針が記載されている
-- [ ] XSS対策の実装方針が記載されている
+- [ ] AI API Key は Laravel .env のみに存在することが明記されている
+- [ ] Python AI Service は Nginx に expose しないことが設計図に反映されている
+- [ ] ファイルアップロード: MIMEタイプ+マジックバイト両方チェック
+- [ ] ClamAV スキャンが設計に含まれている
+- [ ] Signed URL の有効期限が定義されている (30分)
+- [ ] バリデーション: Laravel = security、Flutter = UX のみ
 
 ---
 
-## Slide 7: 設計レビュー — よくある指摘事項
+## Slide 7: 設計レビュー — AI-IA特有の指摘事項
 
-### DB設計でのレビュー指摘
+### レビュー観点 1: 非同期処理の状態カバレッジ
 
-**指摘 1: N+1 Query を誘発する設計**
+**指摘:** 全6ステータスが設計に反映されているか
+
 ```
-問題: applications テーブルから equipment_id を取得し、
-      ループの中で equipment を1件ずつ取得
-
-対策: APIのDB Queryで必要なJOINを事前に設計書に明記する
-例:
-  GET /my/applications の場合:
-  SELECT a.*, e.name as equipment_name, e.status as equipment_status,
-         c.name as category_name
-  FROM applications a
-  JOIN equipment e ON a.equipment_id = e.id
-  JOIN categories c ON e.category_id = c.id
-  WHERE a.user_id = $1
-  ORDER BY a.created_at DESC
-  LIMIT $2 OFFSET $3;
+UPLOADED     → バッチ処理開始前のチェックに含まれているか?
+QUEUED       → Redis Queue監視の設計があるか?
+PROCESSING   → Worker クラッシュ時の BATCH-001 で対応しているか?
+COMPLETED    → Flutter のポーリング停止条件に含まれているか?
+FAILED       → retry_count < 3 のリトライ、= 3 のエスカレーションがあるか?
+NEEDS_REVIEW → confidence_score の閾値 (0.85) が設計に明記されているか?
 ```
 
-**指摘 2: 削除時の参照整合性**
-```
-問題: categories テーブルを削除したとき、
-      equipment.category_id が孤立する
+### レビュー観点 2: AI タイムアウト処理
 
-設計での決定:
-  1. Hard Delete禁止 → Soft Delete (deleted_at) のみ
-  2. FK は ON DELETE RESTRICT (デフォルト) を使用
-  3. カテゴリは「機器が1件でも紐づいていれば削除不可」のバリデーション
+**指摘:** Python AI Service がタイムアウトした場合の設計
+
+```
+問題: LayoutLMv3 の処理が30秒を超えた場合、Laravel Worker はどうなる?
+
+設計での決定事項:
+  1. Laravel Worker のタイムアウト: 30秒
+  2. タイムアウト発生:
+     → invoices.status = 'FAILED'
+     → invoices.error_message = 'AI処理タイムアウト (30秒超過)'
+     → audit_logs に記録
+  3. BATCH-002 が15分後に自動リトライ
+  4. 3回タイムアウト: 管理者アラート + 手動対応
+
+テーブル設計への反映:
+  invoices.error_message TEXT NULL ← タイムアウト内容を保存
+  invoices.retry_count SMALLINT    ← リトライ回数を追跡
+```
+
+### レビュー観点 3: 財務ファイルのセキュリティ
+
+**指摘:** Signed URL の設計が不完全
+
+```
+問題: Signed URL が漏れた場合 (30分以内) のリスク
+
+追加設計:
+  1. Signed URL 生成ログ: audit_logs に記録
+     action = 'SIGNED_URL_GENERATED', target_id = invoice_id
+  2. 同一 invoice_id への Signed URL 生成: 10回/時間 に制限
+  3. Signed URL のドメインを社内ネットワークに限定
+     → MinIO の presigned URL に IP 制限を追加検討
+  4. 異常なアクセスパターン検知:
+     → 同一 URL への 5回以上アクセス → アラート
 ```
 
 ---
@@ -323,81 +384,87 @@ GET /admin/reports/overdue?from=2026-01-01&to=2026-03-31
 **ペア分け:** 2名1組
 **役割:** レビュアー(1名) + 著者(1名) → 15分後に交代
 
-**レビュー対象:** 相手の DB設計書 (テーブル定義書)
+**レビュー対象:** 相手の DB設計書 (invoices + invoice_extracted_data)
 
-**レビュー観点 (5点チェック):**
+**レビュー観点 — AI-IA 5点チェック:**
 
-1. **必須カラム確認**
-   - UUID PK, created_at, updated_at は全テーブルにあるか
+1. **AI Processing State Machine の完全性**
+   - 6ステータス全てが CHECK 制約に含まれているか
+   - NEEDS_REVIEW への遷移条件 (confidence_score < 0.85) が設計書に明記されているか
 
-2. **NULL/NOT NULL 妥当性**
-   - "任意入力" の項目だけNULL許容になっているか
+2. **インデックスの大量データ対策**
+   - (status, created_at) 複合インデックスがあるか
+   - (user_id, status) インデックスがあるか
+   - NEEDS_REVIEW 専用 Partial Index があるか
 
-3. **Index 過不足**
-   - WHERE句に使うカラムにIndexがあるか
-   - 不要なIndexがないか
+3. **財務データの制約**
+   - total_amount, tax_amount が NUMERIC (FLOATではない) か
+   - confidence_score が NUMERIC(5,4) か
+   - journal_entries に soft delete または delete 禁止の注記があるか
 
-4. **FK と Soft Delete の整合性**
-   - FK があるのに参照先テーブルがHard Deleteされる設計になっていないか
+4. **AI抽出データの設計**
+   - raw_extraction JSONB で AI 生出力を保存しているか (デバッグ用)
+   - ai_model_version が記録されているか (精度追跡用)
+   - reviewed_by / reviewed_at があるか
 
-5. **楽観ロック対象**
-   - 競合が起きうるリソースに `version` カラムがあるか
+5. **セキュリティ関連カラム**
+   - users に login_failure_count と locked_until があるか
+   - audit_logs の保持期間 (7年) が設計書に明記されているか
 
 **フィードバック形式:**
 ```
 良かった点: 〇〇の設計が明確でした
-改善提案 1: 〇〇テーブルの〇〇カラムにNOT NULLが必要では？
-改善提案 2: 〇〇のIndexはWHERE条件が不完全では？
-質問: 〇〇のステータスがENUMではなくVARCHARの理由は？
+改善提案 1: invoicesテーブルのインデックスが不足では？
+改善提案 2: confidence_scoreの閾値が設計書に明記されていない
+質問: NEEDS_REVIEWからCOMPLETEDへの遷移はどのAPIで行われる?
 ```
 
 ---
 
 ## Slide 9: 模範解答 — 見落としがちな設計ポイント
 
-### ポイント 1: 申請番号の採番ルール
+### ポイント 1: NEEDS_REVIEW → COMPLETED への遷移
 
 **よくある問題:**
 ```
-application_no は AUTO INCREMENT で自動採番
+POST /invoices/{id}/approve で status を COMPLETED に変える、
+と書いているが、NEEDS_REVIEW の場合も同じAPIか?
 ```
-
-**問題点:**
-- 複数インスタンス起動時にシーケンス競合の可能性
-- 月次リセットが難しい
-
-**推奨設計:**
-```
-PostgreSQL のシーケンスを使用:
-CREATE SEQUENCE application_seq START 1 INCREMENT 1 CACHE 1;
-
-採番ロジック (アプリ層):
-'APP-' || TO_CHAR(NOW() AT TIME ZONE 'Asia/Tokyo', 'YYYYMM')
-       || '-'
-       || LPAD(nextval('application_seq')::TEXT, 5, '0')
-
-月次リセット: pg_cron で月初にシーケンスをリセット
-SELECT setval('application_seq', 1);
-```
-
----
-
-### ポイント 2: 削除済みユーザーの申請
-
-**問題:** users.deleted_at が設定されたとき、
-そのユーザーの `applications` はどうなる?
 
 **設計での決定事項:**
 ```
-1. 申請レコードは削除しない (履歴として保持)
-2. APIのレスポンスで申請者情報を表示する際:
-   - users.deleted_at IS NOT NULL の場合 → "退職済みユーザー" と表示
-   - 氏名・メールは引き続き表示 (管理目的)
-3. 退職済みユーザーは新規申請不可 (is_active = FALSE でブロック)
+POST /api/v1/invoices/{id}/approve の処理:
+  - status が COMPLETED の場合: 仕訳を承認して完了 (すでに信頼度高い)
+  - status が NEEDS_REVIEW の場合: レビュー後に承認して COMPLETED へ
+  → 両方とも同じ approve エンドポイントで処理可能
 
-テーブル設計への反映:
-  applications.user_id の FK は ON DELETE RESTRICT
-  (users を物理削除しようとするとエラー → Soft Deleteのみ許可)
+テーブル変更:
+  invoices.status: NEEDS_REVIEW → COMPLETED
+  invoice_extracted_data.reviewed_by = request.user_id
+  invoice_extracted_data.reviewed_at = NOW()
+  journal_entries: AI提案仕訳を登録 + approved_by 設定
+
+audit_logs に記録: action = 'INVOICE_APPROVED'
+```
+
+### ポイント 2: 複数仕訳の更新整合性
+
+**問題:** approve 時に journal_entries を複数行 INSERT するが、トランザクション内か?
+
+**設計での決定事項:**
+```
+POST /invoices/{id}/approve の処理は全てトランザクション内:
+
+BEGIN:
+  1. invoice_extracted_data を UPDATE (修正内容で上書き)
+  2. 既存の journal_entries を DELETE (AIが先に作成していた場合)
+  3. 新しい journal_entries を INSERT (approved_by付き)
+  4. invoices.status を COMPLETED に UPDATE
+  5. audit_logs INSERT
+COMMIT;
+
+いずれかが失敗した場合: ROLLBACK
+→ 部分的な承認は発生しない
 ```
 
 ---
@@ -413,24 +480,24 @@ SELECT setval('application_seq', 1);
 提出物:
 1. 基本設計書 (本文) — 全10章
 2. ER図 (dbdiagram.io または draw.io)
-3. 画面ワイヤーフレーム (最低5画面)
-4. API仕様書 (最低10エンドポイント)
+3. 画面ワイヤーフレーム (最低5画面 — Split View含む)
+4. API仕様書 (最低10エンドポイント — 非同期含む)
 5. トレーサビリティマトリックス
 
 評価基準:
-│ DB設計の完全性     │ 30点 │ テーブル定義・Index・制約 │
-│ API設計の一貫性    │ 25点 │ Naming・Error Code統一   │
-│ トレーサビリティ   │ 20点 │ 全機能にDesignが対応      │
-│ セキュリティ設計   │ 15点 │ Auth・OWASP対応          │
-│ 文書品質           │ 10点 │ 用語統一・バージョン管理  │
+│ DB設計の完全性      │ 30点 │ テーブル定義・Index・AI State Machine │
+│ API設計の一貫性     │ 25点 │ 202 Async・Polling・Internal API設計  │
+│ トレーサビリティ    │ 20点 │ 全機能にDesignが対応                  │
+│ セキュリティ設計    │ 15点 │ AI Key管理・Signed URL・OWASP対応     │
+│ 文書品質            │ 10点 │ 用語統一・バージョン管理              │
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### 今週の宿題
-> Traceability Matrixの⚠️ Gap 5件を全て補完する:
-> - S121 カテゴリ管理画面の 画面仕様書
-> - F042/F043 延長申請 の API仕様書
-> - F060/F061/F063 の API仕様書
+> Traceability Matrixの⚠️ Gap 3件を全て補完する:
+> - F070 OCR精度ダッシュボードAPIの完全な仕様書
+> - F071 仕入先別統計APIの仕様書
+> - F072 請求書削除の条件と削除APIの完全な仕様書
 
 ### 次回
 **第8回（最終回）:** 卒業課題レビュー & 総まとめ — 設計書の品質を上げる実践

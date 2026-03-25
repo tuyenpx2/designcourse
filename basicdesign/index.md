@@ -17,39 +17,39 @@
 > Đã hoàn thành khóa **Yokenteigi** (slides/) hoặc có kinh nghiệm đọc tài liệu 要件定義書
 
 ## Case Study xuyên suốt
-**社内機器管理・貸出システム** — Hệ thống Quản lý & Mượn thiết bị văn phòng
-- Công ty IT 250 nhân viên, 3 văn phòng, ~500 thiết bị
-- Tech Stack: Node.js + Vue.js 3 + PostgreSQL + Redis + Docker
+**AI請求書自動処理システム (AI-IA)** — AI Invoice Automation System
+- Client: アカウントプロ株式会社 — công ty kế toán 30 nhân viên
+- Tech Stack: **Flutter** (Web+Mobile) + **Laravel 11** + **Python FastAPI** + **LayoutLMv3-base-sroie** + **PostgreSQL** + **Redis** + **MinIO** + **Docker**
+- Trọng tâm: Microservices + Async processing + Security cho dữ liệu tài chính
 
 ## Sản phẩm thiết kế được tạo ra
 
-### DB Design (10 tables)
+### DB Design (11 tables)
 | Table | Mô tả |
 |-------|-------|
-| users | Tài khoản nhân viên |
-| departments | Phòng ban |
-| categories | Danh mục thiết bị |
-| equipment | Thiết bị |
-| equipment_images | Ảnh thiết bị |
-| equipment_status_histories | Lịch sử trạng thái thiết bị |
-| applications | Đơn mượn thiết bị |
-| application_status_histories | Lịch sử trạng thái đơn |
-| notifications | Lịch sử thông báo |
-| audit_logs | Nhật ký thao tác |
+| users | Tài khoản (accountant / reviewer / admin) |
+| invoices | Hóa đơn — 6 trạng thái async (UPLOADED→QUEUED→PROCESSING→COMPLETED/FAILED/NEEDS_REVIEW) |
+| invoice_extracted_data | Dữ liệu AI trích xuất (supplier, date, amount, confidence_score) |
+| journal_entries | Bút toán kế toán đã phê duyệt (debit/credit codes) |
+| suppliers | Nhà cung cấp + default mã định khoản |
+| account_code_mapping | Quy tắc tự động gán mã (keyword → account_code) |
+| processing_batches | Metadata batch upload |
+| notification_logs | Lịch sử thông báo |
+| audit_logs | Nhật ký toàn bộ thao tác tài chính (bắt buộc) |
 
 ### API Design (30+ endpoints)
-- Authentication: login, logout, me, change password
-- Equipment (User): list, detail
-- Equipment (Admin): CRUD, status change, CSV import
-- Applications (User): create, list, cancel, return request
-- Applications (Admin): list, approve, reject, confirm return
-- Reports: utilization, overdue
+- Authentication: login, logout, me (Laravel Sanctum Bearer token)
+- Invoices: POST /upload → **202 Async**, GET /{id}/status (polling), POST /{id}/approve
+- Journal Entries: CRUD + export CSV / 弥生会計 format
+- Master Data: suppliers CRUD, account_code_mapping CRUD
+- **Internal only**: POST /ai/process (Laravel→Python — KHÔNG expose cho Flutter)
+- Reports: AI accuracy stats, processing volume, workload
 
 ### Batch Jobs (5 jobs)
 | Batch | Lịch chạy | Mục đích |
 |-------|----------|---------|
-| BATCH-001 | Hàng ngày 08:00 | Kiểm tra quá hạn, gửi thông báo |
-| BATCH-002 | Hàng ngày 07:00 | RESERVED → BORROWED khi đến ngày |
-| BATCH-003 | Hàng tuần CN 02:00 | Xóa notification cũ |
-| BATCH-004 | Ngày 1 hàng tháng 01:00 | Archive audit log |
-| BATCH-005 | Ngày 1 hàng tháng 03:00 | Tạo báo cáo tháng |
+| BATCH-001 | Mỗi 5 phút | Re-queue invoices stuck ở PROCESSING >5 phút |
+| BATCH-002 | Mỗi 30 phút | Auto-retry FAILED invoices (max 3 lần) |
+| BATCH-003 | Hàng tuần CN 02:00 | Xóa temp files MinIO cũ |
+| BATCH-004 | Hàng ngày 06:00 | Báo cáo độ chính xác AI hàng ngày |
+| BATCH-005 | Ngày 1 hàng tháng 01:00 | Archive completed invoices >1 năm |

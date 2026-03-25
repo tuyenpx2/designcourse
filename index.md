@@ -8,22 +8,22 @@ hero:
   actions:
     - theme: brand
       text: 📋 Yokenteigi Course
-      link: /yokenteigi/
+      link: /yokenteigi/index.md
     - theme: alt
       text: 🏗️ Basic Design Course
-      link: /basicdesign/
+      link: /basicdesign/index.md
     - theme: alt
       text: 📅 Lịch Yokenteigi
-      link: /schedule-yokenteigi
+      link: /schedule-yokenteigi.md
     - theme: alt
       text: 📅 Lịch Basic Design
-      link: /schedule-basicdesign
+      link: /schedule-basicdesign.md
 
 features:
   - title: 📋 要件定義書コース
     details: 8 buổi học cách viết tài liệu yêu cầu chuẩn Nhật — 機能要件, 非機能要件, 業務フロー, ヒアリング, Case Study thực tế
   - title: 🏗️ 基本設計書コース
     details: 8 buổi học thiết kế hệ thống — ER図, テーブル定義書, API設計, 画面設計, Batch, Security, Traceability Matrix
-  - title: 🏢 Case Study
-    details: Hệ thống Quản lý & Mượn thiết bị văn phòng — xuyên suốt cả 2 khóa học, từ yêu cầu đến thiết kế hoàn chỉnh
+  - title: 🤖 Case Study
+    details: AI請求書自動処理システム (AI-IA) — Flutter + Laravel + Python/FastAPI + LayoutLMv3 AI đọc hóa đơn & gợi ý định khoản, xuyên suốt cả 2 khóa học
 ---

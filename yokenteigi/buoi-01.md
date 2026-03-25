@@ -183,6 +183,20 @@ Khách hàng + PM
 | 決済 (Thanh toán) | Thanh toán thẻ, COD, ví điện tử |
 | 管理 (Quản trị) | Quản lý sản phẩm, đơn hàng, người dùng |
 
+### Ví dụ khác — Hệ thống xử lý hóa đơn bằng AI (AI-IA)
+
+Dự án thực tế của khóa học: **AI請求書自動処理システム** — phần mềm giúp công ty kế toán tự động đọc hóa đơn và gợi ý bút toán (仕訳).
+
+| Nhóm | Ví dụ chức năng |
+|------|----------------|
+| アップロード (Tải lên) | Upload hóa đơn (PDF/ảnh), upload hàng loạt |
+| AI処理 (Xử lý AI) | Trích xuất dữ liệu hóa đơn, gợi ý mã tài khoản kế toán |
+| レビュー (Xem xét) | Nhân viên xem kết quả AI, chỉnh sửa và phê duyệt |
+| 検索 (Tìm kiếm) | Tìm kiếm hóa đơn theo nhà cung cấp, ngày, trạng thái |
+| 管理 (Quản trị) | Quản lý mã tài khoản kế toán, nhà cung cấp, người dùng |
+
+> **Điểm đặc biệt:** Không chỉ là OCR — hệ thống **map sang mã tài khoản kế toán** (điện EVN → mã 627, taxi Grab → mã 6421). Đây là 機能要件 cốt lõi mà tài liệu Yokenteigi phải mô tả rõ.
+
 ---
 
 ## Slide 9: 非機能要件 (Non-functional Requirements)
@@ -250,8 +264,11 @@ Ràng buộc không thể thay đổi
 - Người Nhật yêu cầu tài liệu: minh bạch, định lượng, MECE, có thể truy nguyên
 
 ### Bài tập về nhà
-> Chọn 1 ứng dụng bạn đang dùng hàng ngày (ví dụ: app đặt đồ ăn).
-> Liệt kê 5 機能要件 và 3 非機能要件 của app đó.
+> Dựa trên hệ thống **AI請求書自動処理システム (AI-IA)** — phần mềm giúp công ty kế toán アカウントプロ株式会社 (30 kế toán viên) tự động xử lý hóa đơn thay vì nhập tay 4-6 giờ/ngày:
+>
+> 1. Liệt kê **5 機能要件** — hệ thống cần làm gì? (Ví dụ: upload hóa đơn, AI nhận diện, phê duyệt kết quả... hãy cụ thể hơn và thêm 2 chức năng khác bạn nghĩ là cần thiết)
+> 2. Liệt kê **3 非機能要件** — hệ thống phải đáp ứng yêu cầu gì về hiệu năng, bảo mật, khả dụng? (Gợi ý: AI xử lý hóa đơn mất bao lâu là chấp nhận được? Dữ liệu hóa đơn cần bảo mật như thế nào?)
+>
 > Viết theo format: **[ID] — [Tên yêu cầu] — [Mô tả chi tiết, có số liệu cụ thể]**
 
 ### Buổi sau

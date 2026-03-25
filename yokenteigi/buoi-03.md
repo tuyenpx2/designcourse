@@ -310,18 +310,16 @@ Bước 5: Vẽ To-Be Flow
 
 ### Bài tập
 
-**Scenario:** Chức năng Đặt lịch cắt tóc (F003 — 予約登録)
+**Scenario:** Chức năng **AI結果レビュー** (F040 — AI処理後レビュー機能) trong hệ thống AI請求書自動処理システム
 
-**Thông tin có sẵn:**
-- Người dùng chọn thợ cắt tóc, ngày giờ, dịch vụ
-- Hệ thống kiểm tra lịch trống của thợ
-- Gửi SMS xác nhận cho khách
+**Mô tả chức năng:**
+Sau khi AI xử lý hóa đơn, trạng thái chuyển thành `NEEDS_REVIEW`. Kế toán viên mở màn hình xem split-screen: bên trái là ảnh hóa đơn gốc, bên phải là dữ liệu đã trích xuất (nhà cung cấp, số tiền, mã tài khoản kế toán được AI gợi ý). Nhân viên có thể chỉnh sửa mã tài khoản rồi phê duyệt.
 
 **Nhiệm vụ:**
-1. Xác định **前提条件** và **事後条件**
-2. Viết đầy đủ **基本フロー** (ít nhất 6 bước)
-3. Liệt kê ít nhất **3 例外フロー** có thể xảy ra
-4. Thiết kế **バリデーション** cho form đặt lịch
+1. Xác định **前提条件** — hóa đơn phải ở trạng thái nào? Nhân viên cần quyền gì?
+2. Viết đầy đủ **基本フロー** (ít nhất 6 bước — từ khi mở màn hình đến khi phê duyệt thành công)
+3. Viết **代替フロー** — nhân viên từ chối kết quả AI (reject thay vì approve) thì xảy ra gì?
+4. Liệt kê ít nhất **3 例外フロー** — ví dụ: (a) AI service trả về lỗi không có kết quả, (b) mã tài khoản kế toán nhân viên nhập không tồn tại trong master, (c) hóa đơn bị người khác đã phê duyệt trước khi màn hình load xong
 
 **Thời gian:** 20 phút viết + 10 phút thảo luận nhóm
 
@@ -336,12 +334,15 @@ Bước 5: Vẽ To-Be Flow
 - Luôn định lượng thời gian, số lượng, giới hạn
 
 ### Bài tập về nhà
-> Với chức năng **Hủy lịch đặt cắt tóc** (F004 — 予約キャンセル):
+> Với chức năng **一括アップロード** (F025 — 請求書一括アップロード機能):
 >
 > Viết 機能詳細 hoàn chỉnh bao gồm:
-> - Quy tắc: Hủy trước 24h không mất phí / Hủy trong 24h mất 30% phí
-> - Happy path, 代替フロー, 例外フロー
-> - バリデーション
+> - Quy tắc nghiệp vụ: Người dùng upload nhiều file PDF cùng lúc (tối đa 50 file/lần). Mỗi file được xử lý độc lập — nếu 1 file lỗi, các file còn lại vẫn tiếp tục xử lý.
+> - **前提条件** và **事後条件**
+> - **基本フロー** (ít nhất 6 bước — từ chọn file đến khi tất cả file được đưa vào hàng đợi xử lý)
+> - **代替フロー** — người dùng muốn xem tiến độ xử lý từng file trong batch
+> - **例外フロー** — (a) một số file không phải định dạng PDF/ảnh, (b) tổng dung lượng vượt giới hạn, (c) một file bị AI xử lý thất bại trong khi các file khác thành công
+> - **バリデーション** cho form upload (định dạng file, kích thước tối đa mỗi file, số lượng file tối đa)
 
 ### Buổi sau
 **Buổi 4:** Kỹ thuật viết 非機能要件, 画面遷移図, và データ要件

@@ -59,7 +59,7 @@ Mo  Tu  We  Th  Fr  Sa  Su
 | 📁 Tài liệu | Tài liệu slide buổi học (in ra hoặc mở sẵn) |
 | 💻 Laptop | draw.io hoặc Cacoo để vẽ flowchart |
 | 📝 Template | Bộ template Yokenteigi (phát tại buổi 1) |
-| 📖 Yokenteigi buổi 6 | Case Study — Hệ thống thiết bị (từ buổi 6 trở đi) |
+| 📖 Yokenteigi buổi 6 | Case Study — AI請求書自動処理システム (từ buổi 6 trở đi) |
 
 ---
 
@@ -78,9 +78,9 @@ Mo  Tu  We  Th  Fr  Sa  Su
 ## Bài tập tốt nghiệp
 
 > **Đề bài:** Chọn 1 trong 3 chủ đề:
-> - A. Hệ thống đặt lịch phòng họp nội bộ
-> - B. Hệ thống quản lý tài sản văn phòng (mở rộng Case Study)
-> - C. Hệ thống theo dõi OKR / KPI nội bộ
+> - A. AIレシート管理システム (cá nhân chụp ảnh hóa đơn chi tiêu → AI phân loại → hoàn ứng)
+> - B. 仕入先マスタ管理システム (quản lý nhà cung cấp, mã định khoản, import CSV, lịch sử thay đổi)
+> - C. AI-IA拡張版 (mở rộng Case Study: multi-tenant, tích hợp API 弥生会計/freee, AI accuracy dashboard)
 >
 > **Nộp:**
 > 1. Tài liệu Yokenteigi hoàn chỉnh (Word/Excel)

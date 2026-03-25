@@ -13,9 +13,9 @@
 > Học viên đã hoàn thành khóa **Yokenteigi** hoặc có kinh nghiệm đọc tài liệu要件定義書
 
 ### Case Study xuyên suốt khóa học
-> **社内機器管理・貸出システム**
-> Hệ thống Quản lý & Mượn thiết bị văn phòng
-> (PC, thiết bị phòng họp, xe công ty, mobile WiFi)
+> **AI請求書自動処理システム (AI-IA)**
+> Hệ thống Tự động xử lý Hóa đơn bằng AI
+> (Công ty kế toán アカウントプロ株式会社, 30 nhân viên)
 
 ---
 
@@ -149,7 +149,7 @@ Phase         | Tài liệu chính    | Người thực hiện  | Reviewer
 
 **Security:**
 - JWT hay Session-based authentication?
-- Lưu trữ file ở đâu? (S3, local?)
+- Lưu trữ file ở đâu? (S3, MinIO, local?)
 - Rate limiting ở tầng nào?
 
 > **Nguyên tắc:** Mọi quyết định kỹ thuật ảnh hưởng đến nhiều module phải được ghi lại trong Basic Design — không được để mỗi dev tự quyết.
@@ -158,36 +158,45 @@ Phase         | Tài liệu chính    | Người thực hiện  | Reviewer
 
 ## Slide 7: Ví dụ thực tế — Quyết định kỹ thuật trong Case Study
 
-### Hệ thống Quản lý & Mượn thiết bị
+### AI請求書自動処理システム (AI-IA) — アカウントプロ株式会社
 
 **Quyết định 1: Kiến trúc**
 ```
 ❓ Câu hỏi: Monolith hay Microservices?
-✅ Quyết định: Monolith (Modular)
-   Lý do: 250 người dùng nội bộ, team nhỏ 3-5 dev,
-          deadline 3 tháng → microservices quá phức tạp
+✅ Quyết định: Microservices (Laravel + Python FastAPI tách biệt)
+   Lý do: AI processing (LayoutLMv3) cần Python runtime riêng,
+          scale độc lập, fault isolation — nếu AI service down
+          thì Laravel vẫn hoạt động để upload & quản lý hóa đơn
 ```
 
 **Quyết định 2: Tech Stack**
 ```
-❓ Câu hỏi: Frontend framework nào?
-✅ Quyết định: Vue.js 3 + Vite
-   Lý do: Team đã có kinh nghiệm, learning curve thấp
+❓ Câu hỏi: Frontend framework nào? Backend gì?
+✅ Quyết định:
+   Frontend : Flutter (Web + Mobile) — 1 codebase, 2 platform
+   Backend  : Laravel 11 (PHP 8.3) — orchestration + business logic
+   AI Service: Python 3.10 + FastAPI — AI processing only (stateless)
+   Lý do: Flutter đạt yêu cầu mobile scan; Laravel mature cho
+          financial workflow; Python là ngôn ngữ số 1 cho AI/ML
 ```
 
-**Quyết định 3: Xử lý Conflict đặt mượn**
+**Quyết định 3: Xử lý AI bất đồng bộ (非同期処理)**
 ```
-❓ Câu hỏi: Nếu 2 người cùng đặt 1 thiết bị cùng lúc?
-✅ Quyết định: Optimistic Locking + version column
-   Lý do: Tần suất conflict thấp, không cần lock DB
+❓ Câu hỏi: Gọi AI service đồng bộ hay bất đồng bộ?
+✅ Quyết định: Bất đồng bộ qua Redis Queue
+   Lý do: AI processing có thể mất 3-5 giây/hóa đơn,
+          batch 50 hóa đơn không thể block HTTP request.
+          Laravel đẩy job vào Redis → Worker xử lý nền →
+          Flutter polling GET /invoices/{id}/status
 ```
 
-**Quyết định 4: Batch notification**
+**Quyết định 4: Lưu trữ file hóa đơn**
 ```
-❓ Câu hỏi: Cron job hay queue-based?
-✅ Quyết định: PostgreSQL + pg_cron
-   Lý do: Giảm phụ thuộc hạ tầng, 500 records/ngày
-          không cần queue phức tạp
+❓ Câu hỏi: Lưu file scan/PDF ở đâu?
+✅ Quyết định: MinIO (S3-compatible, on-premise) + Signed URL (30 phút)
+   Lý do: Hóa đơn là tài liệu tài chính nhạy cảm — không public URL.
+          Signed URL hết hạn sau 30 phút → file không bị leak.
+          MinIO on-premise đáp ứng yêu cầu bảo mật của công ty kế toán.
 ```
 
 ---
@@ -229,7 +238,7 @@ Bước 6: Thiết kế Batch, Security, Infra
 | 1 | Nền tảng, Kiến trúc hệ thống | Cấu trúc tài liệu, System Architecture |
 | 2 | Thiết kế DB (Phần 1) — ER図 | ER Diagram hoàn chỉnh |
 | 3 | Thiết kế DB (Phần 2) — テーブル定義 | Table Definition Book |
-| 4 | Thiết kế màn hình — Wireframe | Wireframes 18 màn hình |
+| 4 | Thiết kế màn hình — Wireframe | Wireframes các màn hình AI-IA |
 | 5 | Thiết kế API & Interface | API Spec Book |
 | 6 | Thiết kế Batch & Security | Batch Design + Security Design |
 | 7 | Case Study (Phần 1) — Tổng hợp | Draft Basic Design Document |
@@ -239,32 +248,35 @@ Bước 6: Thiết kế Batch, Security, Infra
 
 ## Slide 10: Giới thiệu Case Study
 
-### 社内機器管理・貸出システム
+### AI請求書自動処理システム (AI-IA)
 
 **Bối cảnh:**
-- Công ty IT 250 nhân viên, 3 văn phòng
-- ~500 thiết bị: PC, máy chiếu, xe công ty, WiFi
-- Hiện tại quản lý bằng Excel → sai sót nhiều
+- Công ty kế toán アカウントプロ株式会社, 30 kế toán viên
+- Nhận hóa đơn từ khách hàng dưới dạng: scan giấy, PDF, ảnh smartphone
+- Hiện tại: nhập tay từng hóa đơn vào phần mềm kế toán → mất 30 phút/hóa đơn
+- Mục tiêu: AI trích xuất dữ liệu + gợi ý 仕訳 (journal entry) → kế toán viên chỉ cần review & approve
 
 **Yêu cầu đã xác định (từ Yokenteigi):**
-- 2 cấp phân quyền: User và Admin
-- User: tìm kiếm, đặt mượn, trả thiết bị
-- Admin: CRUD master data, phê duyệt, báo cáo
-- Thông báo tự động: xác nhận, nhắc hạn, quá hạn
+- 3 cấp phân quyền: accountant / reviewer / admin
+- Accountant: upload hóa đơn, review kết quả AI, approve journal entry
+- Reviewer: phê duyệt journal entry có giá trị cao
+- Admin: quản lý user, cấu hình account code mapping, xem báo cáo
+- Xử lý batch: upload 50 hóa đơn cùng lúc, xử lý nền
 
 **Constraints kỹ thuật:**
-- Chỉ dùng trong nội bộ (VPN)
-- PostgreSQL (hạ tầng sẵn có)
-- Budget: 200 triệu VNĐ, 3 tháng
+- Dữ liệu tài chính: không được lưu trên cloud nước ngoài
+- AES-256 encryption at rest cho tất cả dữ liệu tài chính
+- OWASP Top 10 compliance
 
 **Tech Stack quyết định trước:**
 ```
-Backend:    Node.js + Express.js (TypeScript)
-Frontend:   Vue.js 3 + Vite + TailwindCSS
+Frontend:   Flutter (Web + Mobile)
+Backend:    Laravel 11 (PHP 8.3) + Redis Queue
+AI Service: Python 3.10 + FastAPI + LayoutLMv3-base-sroie (MICROSERVICE)
 Database:   PostgreSQL 15
-Cache:      Redis (session, rate limit)
-Deploy:     Docker + Nginx (on-premise server)
-Batch:      pg_cron (PostgreSQL extension)
+File Storage: MinIO (S3-compatible, on-premise)
+Message Queue: Redis 7
+Deploy:     Docker + Nginx (on-premise + cloud option)
 ```
 
 ---
@@ -298,18 +310,18 @@ Batch:      pg_cron (PostgreSQL extension)
 
 ### Lỗi 1: Thiết kế DB trước khi hiểu rõ Business Flow
 > DB phải phản ánh nghiệp vụ, không phải ngược lại.
-> Hãy đọc lại 業務フロー trong Yokenteigi trước khi tạo table.
+> Ví dụ: Không hiểu flow "UPLOADED → QUEUED → PROCESSING → COMPLETED" thì sẽ thiết kế thiếu cột `status` trong bảng `invoices`.
 
 ### Lỗi 2: Bỏ qua Soft Delete
-> Trong hệ thống doanh nghiệp, dữ liệu hiếm khi được xóa vĩnh viễn.
+> Trong hệ thống tài chính, hóa đơn không bao giờ được xóa vĩnh viễn (audit trail).
 > Table nào cần `deleted_at`? Phải quyết định trong Basic Design.
 
 ### Lỗi 3: Không định nghĩa Error Code
 > Mỗi lỗi phải có code duy nhất → dev, BA, KH có chung ngôn ngữ.
-> Ví dụ: `ERR-EQUIP-001` = "Thiết bị không còn khả dụng"
+> Ví dụ: `ERR-INV-001` = "Định dạng file hóa đơn không được hỗ trợ"
 
 ### Lỗi 4: API thiếu Pagination
-> List API không có pagination → 500 records → frontend đứng.
+> List API journal entries không có pagination → 100,000 records → frontend đứng.
 > Phải thiết kế pagination ngay từ đầu.
 
 ### Lỗi 5: Viết Basic Design như Detailed Design
@@ -429,14 +441,14 @@ Step 7: 設計書に組み込む
 - Đọc kỹ Yokenteigi **trước** khi bắt đầu thiết kế
 
 ### Bài tập về nhà
-> Đọc lại Yokenteigi của hệ thống thiết bị (buổi 6-7 khóa trước).
+> Đọc lại Yokenteigi của hệ thống AI-IA.
 > Trả lời 5 câu hỏi kỹ thuật sau (không cần giải thích dài, chỉ cần quyết định + lý do 1-2 câu):
 >
-> 1. Monolith hay Microservices? Tại sao?
-> 2. JWT hay Session? Tại sao?
-> 3. Lưu file ảnh thiết bị ở đâu? (DB, local, S3?)
-> 4. Soft delete hay Hard delete cho table `equipment`?
-> 5. Real-time notification (WebSocket) hay polling?
+> 1. Microservices (Laravel + Python tách biệt) hay Monolith? Tại sao phù hợp với AI-IA?
+> 2. Laravel Sanctum (Bearer token) hay JWT tự quản lý? Tại sao?
+> 3. Lưu file hóa đơn (PDF/ảnh) ở đâu? MinIO signed URL hay public URL? Tại sao quan trọng với tài liệu tài chính?
+> 4. Soft delete hay Hard delete cho bảng `invoices`? Ảnh hưởng đến audit trail như thế nào?
+> 5. Flutter polling `GET /invoices/{id}/status` hay WebSocket để theo dõi trạng thái xử lý AI? Ưu nhược điểm mỗi cách?
 
 ### Buổi sau
-**Buổi 2:** Thiết kế DB (Phần 1) — Vẽ ER図 hoàn chỉnh cho hệ thống thiết bị
+**Buổi 2:** Thiết kế DB (Phần 1) — Vẽ ER図 hoàn chỉnh cho hệ thống AI-IA

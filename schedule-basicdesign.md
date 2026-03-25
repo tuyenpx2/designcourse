@@ -26,13 +26,13 @@ Mo  Tu  We  Th  Fr  Sa  Su
 
 | 週 | 日程 | 時間 | 回 | テーマ | 内容 | 宿題期限 |
 |----|------|------|-----|--------|------|---------|
-| 1週目 | 5/4 (月) | 18:00〜18:30 | **Buổi 1** | 🟦 Nền tảng: Kihon Sekkei là gì | ・Kihon Sekkei vs Yokenteigi vs Shousai Sekkei<br>・Quy trình 6 bước thiết kế<br>・Cấu trúc tài liệu chuẩn<br>・Tech stack quyết định: PostgreSQL, Docker, JWT | — |
-| | | 18:30〜19:00 | **Buổi 2** | 🟦 ER図 設計 (Phần 1) | ・Trích xuất Entity từ 機能一覧<br>・Vẽ ER図 Crow's Foot<br>・Soft Delete & Optimistic Locking<br>・AI tools: Claude + dbdiagram.io DBML | ✏️ Hạn 5/10: Bài tập Buổi 1+2 |
-| 2週目 | 5/11 (月) | 18:00〜18:30 | **Buổi 3** | 🟩 テーブル定義書 | ・Cấu trúc テーブル定義書 chuẩn<br>・10 bảng: users, equipment, applications, categories...<br>・Index strategy & Migration Scripts<br>・Status history tables | — |
-| | | 18:30〜19:00 | **Buổi 4** | 🟩 画面設計 & Wireframe | ・画面一覧 & 画面遷移図<br>・Wireframe: S020/S021/S030/S131<br>・Empty/Loading/Error states<br>・AI tools: v0.dev, Whimsical AI, draw.io | ✏️ Hạn 5/17: Bài tập Buổi 3+4 |
-| 3週目 | 5/18 (月) | 18:00〜18:30 | **Buổi 5** | 🟨 API設計 | ・RESTful naming conventions<br>・30 endpoints — API一覧<br>・API仕様書 chi tiết<br>・JWT flow, Error codes, Pagination<br>・AI tools: Swagger Editor, Mermaid sequenceDiagram | — |
-| | | 18:30〜19:00 | **Buổi 6** | 🟧 Batch & Security & Infra | ・5 Batch jobs (pg_cron, idempotency)<br>・Security: XSS/SQLi/CORS/RBAC<br>・Infrastructure: on-premise Docker<br>・Monitoring & Blue-Green Deploy<br>・AI tools: Eraser.io, PlantUML | ✏️ Hạn 5/24: Bài tập Buổi 5+6 |
-| 4週目 | 5/25 (月) | 18:00〜18:30 | **Buổi 7** | 🟧 Traceability Matrix & Review | ・Map toàn bộ F001-F063 → DB/API/Screen/Batch<br>・Gap analysis (phát hiện thiếu sót)<br>・Review chéo theo checklist<br>・Cấu trúc tài liệu hoàn chỉnh | — |
+| 1週目 | 5/4 (月) | 18:00〜18:30 | **Buổi 1** | 🟦 Nền tảng: Kihon Sekkei là gì | ・Kihon Sekkei vs Yokenteigi vs Shousai Sekkei<br>・Quy trình 6 bước thiết kế<br>・Tech stack quyết định: Flutter/Laravel/Python/Redis<br>・Microservices architecture cho AI-IA | — |
+| | | 18:30〜19:00 | **Buổi 2** | 🟦 ER図 設計 (Phần 1) | ・Trích xuất Entity từ AI-IA 機能一覧<br>・Vẽ ER図 Crow's Foot (invoices, journal_entries, suppliers...)<br>・AI Processing State Machine trong DB<br>・AI tools: Claude + dbdiagram.io DBML | ✏️ Hạn 5/10: Bài tập Buổi 1+2 |
+| 2週目 | 5/11 (月) | 18:00〜18:30 | **Buổi 3** | 🟩 テーブル定義書 | ・Cấu trúc テーブル定義書 chuẩn<br>・11 bảng: invoices (6 status), invoice_extracted_data, journal_entries...<br>・Index strategy cho 100k+ records<br>・Migration Scripts | — |
+| | | 18:30〜19:00 | **Buổi 4** | 🟩 画面設計 & Wireframe | ・画面一覧 & 画面遷移図 cho Flutter<br>・Wireframe: Upload screen, Split-View Review screen, Journal Entry list<br>・Polling UX cho async processing<br>・AI tools: v0.dev, Whimsical AI, draw.io | ✏️ Hạn 5/17: Bài tập Buổi 3+4 |
+| 3週目 | 5/18 (月) | 18:00〜18:30 | **Buổi 5** | 🟨 API設計 | ・POST /invoices/upload → 202 Async<br>・GET /invoices/{id}/status — polling pattern<br>・POST /ai/process — INTERNAL ONLY (không expose Flutter)<br>・Laravel Sanctum, Error codes, Pagination<br>・AI tools: Swagger Editor, Mermaid sequenceDiagram | — |
+| | | 18:30〜19:00 | **Buổi 6** | 🟧 Batch & Security & Infra | ・5 Batch jobs (retry logic, idempotency)<br>・Security: AI API key management, Signed URL, file upload OWASP<br>・Infrastructure: Docker Compose (Laravel+Python+Redis+MinIO+PostgreSQL)<br>・AI tools: Eraser.io, PlantUML | ✏️ Hạn 5/24: Bài tập Buổi 5+6 |
+| 4週目 | 5/25 (月) | 18:00〜18:30 | **Buổi 7** | 🟧 Traceability Matrix & Review | ・Map toàn bộ F001-F092 → DB/API/Screen/Batch<br>・Gap analysis (phát hiện thiếu sót)<br>・Review chéo: async state coverage, security checklist<br>・Cấu trúc tài liệu hoàn chỉnh | — |
 | | | 18:30〜19:00 | **Buổi 8** | 🏆 Tổng kết & Tốt nghiệp | ・10 bài học thực chiến<br>・12 golden rules 基本設計<br>・Bridge to 詳細設計<br>・Phát biểu bài tốt nghiệp & 修了証授与 | 📋 **Nộp bài TN trước 5/23** |
 
 ---
@@ -63,7 +63,7 @@ Mo  Tu  We  Th  Fr  Sa  Su
 | 💻 Laptop | dbdiagram.io, draw.io / Whimsical, Swagger Editor |
 | 📝 Template | Bộ template 基本設計書 (phát tại buổi 1) |
 | 🤖 AI Tools | Tài khoản Claude.ai (hoặc ChatGPT) để tạo prompt |
-| 📖 Case Study | Hệ thống Quản lý & Mượn thiết bị văn phòng (xuyên suốt) |
+| 📖 Case Study | AI請求書自動処理システム — AI-IA (xuyên suốt khóa học) |
 
 ---
 
@@ -82,9 +82,9 @@ Mo  Tu  We  Th  Fr  Sa  Su
 ## Bài tập tốt nghiệp
 
 > **Đề bài:** Dựa trên Yokenteigi đã viết ở khóa trước, tạo 基本設計書 hoàn chỉnh cho 1 trong 3 hệ thống:
-> - A. Hệ thống đặt lịch phòng họp nội bộ *(nối tiếp bài TN Yokenteigi topic A)*
-> - B. Hệ thống quản lý tài sản văn phòng *(mở rộng Case Study)*
-> - C. Hệ thống theo dõi OKR / KPI nội bộ *(nối tiếp bài TN Yokenteigi topic C)*
+> - A. AIレシート管理システム *(nối tiếp bài TN Yokenteigi topic A — cá nhân quản lý chi tiêu qua AI)*
+> - B. 仕入先マスタ管理システム *(nối tiếp bài TN Yokenteigi topic B — quản lý nhà cung cấp + mapping)*
+> - C. AI-IA拡張版 *(mở rộng Case Study: multi-tenant SaaS, 弥生会計/freee API, AI accuracy dashboard)*
 >
 > **Nộp:**
 > 1. ER図 (dbdiagram.io export hoặc draw.io)

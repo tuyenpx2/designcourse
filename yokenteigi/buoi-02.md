@@ -340,15 +340,15 @@ Khách đặt online → Hệ thống validate → Gửi email KH + Kho →
 
 ### Bài tập tại lớp (30 phút)
 
-**Scenario:** Bạn là BA của dự án xây dựng hệ thống đặt lịch cắt tóc online.
+**Scenario:** Bạn là BA của dự án **AI請求書自動処理システム (AI-IA)** cho công ty kế toán アカウントプロ株式会社.
 
 **Khách hàng cung cấp:**
-> "Tôi muốn có app để khách đặt lịch online, thợ cắt tóc xem được lịch, và tôi quản lý được doanh thu"
+> "Chúng tôi có 30 kế toán viên, mỗi ngày phải nhập tay dữ liệu từ hóa đơn vào hệ thống kế toán — mất 4-6 tiếng mỗi ngày. Tôi muốn dùng AI để đọc hóa đơn và tự động gợi ý bút toán (仕訳), nhân viên chỉ cần kiểm tra và phê duyệt."
 
 **Nhiệm vụ:**
-1. Điền phần **1.2 適用範囲** — Xác định phạm vi hệ thống
-2. Điền **2.3 利用者** — Liệt kê các loại người dùng
-3. Viết **機能一覧** — Ít nhất 8 chức năng với ID, tên, mô tả, priority
+1. Điền phần **1.2 適用範囲** — Xác định phạm vi hệ thống AI-IA (bao gồm gì? loại trừ gì? ví dụ: tích hợp phần mềm kế toán bên ngoài có trong phạm vi không?)
+2. Điền **2.3 利用者** — Liệt kê các loại người dùng của hệ thống AI-IA (ai upload hóa đơn? ai phê duyệt? ai quản trị mã tài khoản kế toán?)
+3. Viết **機能一覧** — Ít nhất 8 chức năng với ID, tên, mô tả, priority (gợi ý: upload đơn lẻ, upload hàng loạt, xem kết quả AI, chỉnh sửa mã tài khoản, phê duyệt, tìm kiếm hóa đơn, quản lý mã tài khoản master, báo cáo thống kê...)
 
 ---
 
@@ -361,10 +361,11 @@ Khách đặt online → Hệ thống validate → Gửi email KH + Kho →
 - 非機能要件 phải định lượng, có số liệu cụ thể
 
 ### Bài tập về nhà
-> Tiếp tục với app đặt lịch cắt tóc từ bài tập tại lớp.
+> Tiếp tục với hệ thống **AI請求書自動処理システム** từ bài tập tại lớp.
 > Hoàn thiện:
-> - 業務フロー: Vẽ As-Is (đặt lịch qua điện thoại) và To-Be (đặt lịch qua app)
-> - 非機能要件: Điền đầy đủ 性能, 可用性, セキュリティ với số liệu cụ thể
+> - **業務フロー As-Is:** Vẽ quy trình hiện tại — kế toán viên nhận hóa đơn giấy/PDF, nhập tay vào hệ thống kế toán, kiểm tra, lưu trữ (chỉ rõ điểm đau: mất bao lâu? dễ sai ở bước nào?)
+> - **業務フロー To-Be:** Vẽ quy trình mới — upload hóa đơn → AI xử lý (async) → nhân viên review kết quả AI → phê duyệt → lưu vào hệ thống
+> - **非機能要件:** Điền đầy đủ 性能, 可用性, セキュリティ với số liệu cụ thể — phải bao gồm: (1) thời gian AI xử lý 1 hóa đơn là bao nhiêu giây được chấp nhận? (2) khối lượng hóa đơn dự kiến mỗi ngày? (3) yêu cầu bảo mật cho file hóa đơn chứa dữ liệu tài chính?
 
 ### Buổi sau
-**Buổi 3-4:** Kỹ thuật viết từng phần chi tiết — 業務フロー, 機能詳細, 非機能要件
+**Buổi 3-4:** Kỹ thuật viết từng phần chi tiết — 業務フロー, 機能詳細, 非機能要件 (tiếp tục dùng **AI請求書システム** làm ví dụ xuyên suốt)

@@ -25,18 +25,20 @@ Mỗi file slide bao gồm:
 BA, SE, PL, PM làm việc với khách hàng Nhật hoặc môi trường công ty Nhật
 
 ## Case Study xuyên suốt
-**Buổi 6-7:** Hệ thống Quản lý & Mượn thiết bị văn phòng (社内機器管理・貸出システム)
-- Công ty IT 250 nhân viên, 3 văn phòng, ~500 thiết bị
-- Thiết bị: PC, thiết bị phòng họp, xe công ty, mobile WiFi
-- Phân quyền 2 cấp: User (mượn) và Admin (duyệt + quản lý master data)
-- Từ yêu cầu thô → tài liệu Yokenteigi hoàn chỉnh (15 chương)
+**Buổi 6-7:** AI請求書自動処理システム (AI Invoice Automation System — "AI-IA")
+- Client: アカウントプロ株式会社 — công ty kế toán 30 nhân viên
+- Vấn đề: Nhân viên nhập liệu thủ công hóa đơn 4-6 giờ/ngày, lỗi ~50 lần/tháng
+- Giải pháp: Flutter app + Laravel + Python/FastAPI + LayoutLMv3-base-sroie AI đọc hóa đơn (giấy/PDF/ảnh chụp) và gợi ý mã định khoản (仕訳)
+- Trọng tâm thiết kế: **非同期処理**, **大量データ対応**, **セキュリティ**
+- Từ yêu cầu thô → tài liệu Yokenteigi hoàn chỉnh
 
 ## Các chức năng chính trong Case Study
 | Nhóm | Chức năng |
 |------|-----------|
-| 認証・アカウント | Login, phân quyền User/Admin, quản lý account |
-| 機器マスタ | CRUD thiết bị, phân loại, trạng thái (Admin only) |
-| 貸出申請 | Tìm kiếm → Gửi yêu cầu → Admin phê duyệt |
-| 返却 | Trả thiết bị → Admin xác nhận |
-| 通知 | Thông báo tự động: duyệt, gần hạn, quá hạn |
-| 履歴・レポート | Lịch sử mượn, báo cáo tỷ lệ sử dụng |
+| 認証・アカウント | Login, phân quyền Accountant/Reviewer/Admin |
+| アップロード | Chụp ảnh, upload PDF/image, batch upload |
+| AI処理管理 | Theo dõi trạng thái xử lý async (UPLOADED→QUEUED→PROCESSING→COMPLETED/FAILED) |
+| レビュー・承認 | Split-view: ảnh hóa đơn + form trích xuất AI, sửa mã định khoản, phê duyệt |
+| 仕訳データ | Quản lý journal entries, export CSV/弥生会計 format |
+| マスタ管理 | Nhà cung cấp, mã tài khoản, quy tắc mapping tự động |
+| 通知・レポート | Thông báo xử lý xong, thống kê độ chính xác AI |
