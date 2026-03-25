@@ -1,4 +1,4 @@
-name: Deploy VitePress site to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -20,8 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,24 +27,16 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
       - name: Install dependencies
         run: npm install
 
-      # Bổ sung bước này để sửa lỗi Permission denied
-      - name: Fix permissions
-        run: chmod -R +x node_modules/.bin
-
-      - name: Build with VitePress
-        # Sử dụng npx để đảm bảo lệnh được thực thi đúng môi trường
-        run: npx vitepress build
+      - name: Build HTML
+        run: node build-html.js
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .vitepress/dist
+          path: docs-html
 
   deploy:
     environment:
