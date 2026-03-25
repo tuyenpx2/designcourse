@@ -230,6 +230,8 @@ function postprocessHtml(html) {
   // Wrap every <table> in a responsive div
   html = html.replace(/<table>/g, '<div class="table-responsive-wrapper"><table class="table table-bordered table-hover table-sm">');
   html = html.replace(/<\/table>/g, '</table></div>');
+  // Replace .md links with .html
+  html = html.replace(/href="([^"]+)\.md"/g, 'href="$1.html"');
   return html;
 }
 
