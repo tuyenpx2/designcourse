@@ -110,12 +110,11 @@ function lessonNav(outFile) {
   const isBD = outFile.startsWith('basicdesign/buoi-');
   if (!isYK && !isBD) return '';
 
-  const prefix = isYK ? 'yokenteigi/buoi-' : 'basicdesign/buoi-';
   const match = outFile.match(/buoi-0?(\d+)\.html/);
   if (!match) return '';
   const num = parseInt(match[1]);
-  const prev = num > 1 ? `<a href="${prefix}0${num-1}.html" class="btn btn-outline-secondary btn-sm">← Buổi ${num-1}</a>` : '<span></span>';
-  const next = num < 8 ? `<a href="${prefix}0${num+1}.html" class="btn btn-primary btn-sm">Buổi ${num+1} →</a>` : '<span></span>';
+  const prev = num > 1 ? `<a href="buoi-0${num-1}.html" class="btn btn-outline-secondary btn-sm">← Buổi ${num-1}</a>` : '<span></span>';
+  const next = num < 8 ? `<a href="buoi-0${num+1}.html" class="btn btn-primary btn-sm">Buổi ${num+1} →</a>` : '<span></span>';
   const indexHref = isYK ? 'index.html' : 'index.html';
   return `
   <div class="d-flex justify-content-between align-items-center mt-5 pt-4 border-top">
