@@ -210,6 +210,20 @@ function htmlTemplate({ title, bodyHtml, rootPrefix, outFile }) {
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+    // Convert <code class="language-mermaid"> blocks to <div class="mermaid">
+    document.querySelectorAll('pre > code.language-mermaid').forEach(el => {
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      el.parentElement.replaceWith(div);
+    });
+
+    await mermaid.run();
+  </script>
 </body>
 </html>`;
 }
